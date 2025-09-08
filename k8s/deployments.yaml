@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-gateway
+  namespace: gremlin-workshop
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: api-gateway }
+  template:
+    metadata:
+      labels: { app: api-gateway }
+    spec:
+      containers:
+        - name: api-gateway
+          image: api-gateway:1.0.0
+          ports: [ { containerPort: 3000 } ]
+          env:
+            - name: PORT
+              value: "3000"
+            - name: BACKEND_URL
+              value: "http://payments:3001"
+            - name: FAILURE_FLAGS_ENABLED
+              value: "false"   # En K8s usamos agente Gremlin; Failure Flags off
+          resources:
+            requests: { cpu: "100m", memory: "128Mi" }
+            limits: { cpu: "500m", memory: "256Mi" }
+          readinessProbe:
+            httpGet: { path: /salud, port: 3000 }
+            initialDelaySeconds: 5
+            periodSeconds: 5
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payments
+  namespace: gremlin-workshop
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: payments }
+  template:
+    metadata:
+      labels: { app: payments }
+    spec:
+      containers:
+        - name: payments
+          image: payments:1.0.0
+          ports: [ { containerPort: 3001 } ]
+          env:
+            - name: PORT
+              value: "3001"
+            - name: FAILURE_FLAGS_ENABLED
+              value: "false"
+          resources:
+            requests: { cpu: "100m", memory: "128Mi" }
+            limits: { cpu: "500m", memory: "256Mi" }
+          readinessProbe:
+            httpGet: { path: /salud, port: 3001 }
+            initialDelaySeconds: 5
+            periodSeconds: 5

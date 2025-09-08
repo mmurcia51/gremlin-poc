@@ -1,0 +1,87 @@
+{
+  "family": "gremlin-gateway",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": [
+    "FARGATE"
+  ],
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "arn:aws:iam::YOUR_ACCOUNT_ID:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::YOUR_ACCOUNT_ID:role/ecsTaskRole",
+  "runtimePlatform": {
+    "cpuArchitecture": "X86_64",
+    "operatingSystemFamily": "LINUX"
+  },
+  "containerDefinitions": [
+    {
+      "name": "api-gateway",
+      "image": "YOUR_ECR_REPO/api-gateway:1.0.0",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 3000,
+          "hostPort": 3000,
+          "protocol": "tcp",
+          "name": "http-3000"
+        }
+      ],
+      "environment": [
+        {
+          "name": "PORT",
+          "value": "3000"
+        },
+        {
+          "name": "BACKEND_URL",
+          "value": "http://payments.internal:3001"
+        },
+        {
+          "name": "FAILURE_FLAGS_ENABLED",
+          "value": "true"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-region": "us-east-1",
+          "awslogs-group": "/ecs/gremlin-gateway",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
+    },
+    {
+      "name": "gremlin-sidecar",
+      "image": "gremlin/failure-flags-sidecar:latest",
+      "essential": false,
+      "environment": [
+        {
+          "name": "SERVICE_NAME",
+          "value": "api-gateway"
+        },
+        {
+          "name": "GREMLIN_SIDECAR_ENABLED",
+          "value": "true"
+        },
+        {
+          "name": "GREMLIN_TEAM_ID",
+          "value": "YOUR_TEAM_ID"
+        },
+        {
+          "name": "GREMLIN_TEAM_CERTIFICATE_ARN",
+          "value": "arn:aws:secretsmanager:REGION:ACCT:secret:GREMLIN_CERT"
+        },
+        {
+          "name": "GREMLIN_TEAM_PRIVATE_KEY_ARN",
+          "value": "arn:aws:secretsmanager:REGION:ACCT:secret:GREMLIN_KEY"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-region": "us-east-1",
+          "awslogs-group": "/ecs/gremlin-gateway",
+          "awslogs-stream-prefix": "gremlin"
+        }
+      }
+    }
+  ]
+}
